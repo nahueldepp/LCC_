@@ -1,0 +1,102 @@
+Pasos a seguir para realizar el TP
+
+1. 📘 Entender el lenguaje
+2. 📦 Diseñar estructuras de datos
+3. 🛠 Implementar parser para defl
+4. 🔧 Agregar parser de deff (composición y repetición)
+5. ⚙ Implementar evaluador de funciones
+6. 💬 Hacer el shell interactivo
+7. 🔍 Implementar search (búsqueda de transformación)
+8. 🧼 Modularizar y testear
+
+ 
+A medida que avances, separá en módulos/archivos:
+
+parser.c / parser.h: lectura y análisis de sentencias.
+
+listas.c / listas.h: funciones sobre listas.
+
+funciones.c / funciones.h: representación y aplicación de funciones.
+
+busqueda.c / busqueda.h: lógica de search.
+
+main.c: el shell.
+
+******************************************************************
+el parser recibirá comandos de la siguiente manera: 
+Para listas defl:
+defl L1 = [0, 2, 4, 8]; se interpretara como string de tal manera que: 
+char str[250]= {d|e|f|l| |L|1| |=| |[|0|,|2|,|4|,|8|]|;|/0}
+
+con la función strtok(), se usaran como delimitadores "=,[];"
+donde el resultado será:
+
+str[]={d|e|f|l|/0|L|1|/0|/0|/0|/0|0|/0|2|/0|4|/0|8|/0|/0}
+       d0         d1     d2   d3   d4   d5
+luego se crearan punteros:
+
+char* tokens[100]= {d0,d1,d2,d3,d4,d5} con esto se almacenaría una lista de largo 98
+numTokens= 6
+char* sentencia= tokens[0]
+luego:
+lista_crear(tokens + 1, numTokens -1)
+con lo cual se pasara tokens a partir del nombre de la función y los elementos de la lista, y el número de elementos de la lista 
+donde d0 será la dirección al token que declara que tipo de sentencia 
+Una vez declarada y formada la lista el contenido de str[] no es necesario, asi que con memset()
+se pisaran los datos viejos, y queda usable para el próximo comando
+asimismo con tokens[], memset(tokens,NULL,sizeof(tokens))
+
+Para Funciones deff:
+deff f= 0d 0i Si 0d;
+se interpretara como string de tal manera que: 
+char str[250]= {d|e|f|f| |f| |=| |0i|0d|Si|;|/0}
+
+***********************************************************
+
+Funciones:
+
+Las funciones se van a dividir en 3  tipos:
+Funcione Primitiva, Funcion Del usuario, Función Composicion, Función Repetición
+de manera que se define
+
+typedef enum {
+    FUNC_OI,FUNC_OD,FUNC_SI,FUNC_SD,FUNC_DI,FUNC_DD,
+    FUNC_COMPOSICION,
+    FUNC_USUARIO,
+    FUNC_REPETICION
+}TipoFuncion;
+
+las funciones rimitivas tendrán su propia definición dentro del programa tal que:
+void func_tipo de primitiva(Lista);
+
+las cuales se almacenaran en una lista de tipo FuncionPimitiva tal que:
+FuncionPrimitiva funcionesPrimitivas[]= {
+    func_Oi, func_Od,
+    func_Si, func_Sd,
+    func_Di,func_Dd
+}
+para mas fácil acceso, asi al querer evaluar una función primitiva hacemos 
+evaluar_primitiva(List lista, TipoFuncion t){
+    funcionesPrimitivas[t](lista);
+}
+
+definiendo la estructura Funcion como:
+
+struct _Funcion{
+	char* nombre;
+	ColaPrimitivas operaciones;
+}
+
+creo una cola de punteros a la lista de funciones primitivas, cuando quiera componer, creo la copia
+de la cola que representa una función y la enlazo con la cola de la siguiente función 
+es decir: 
+
+   0d 	
+f= 0d(funcionesPrimitivas[0])-> 0d-> Sd-> 0d-> Sd-> Sd->NULL FIFO
+g= 0d-> Si-> Si-> 0d-> NULL
+h= f g
+ = 0d 0d Sd 0d Sd Sd 0d Si Si 0d
+
+Entonces cuando hago una composición, puedo realizar solo un encadenamiento de colas
+
+Estamos lidiando con como guardar las funciones en la tabla hash

@@ -1,0 +1,54 @@
+[4mstring.h[24m(3)                                                  avr-libc                                                  [4mstring.h[24m(3)
+
+[1mNAME[0m
+       string.h -
+
+[1mSYNOPSIS[0m
+   [1mDefines[0m
+       #define [1m_FFS[22m(x)
+
+   [1mFunctions[0m
+       int [1mffs [22m(int __val)
+       int [1mffsl [22m(long __val)
+       __extension__ int [1mffsll [22m(long long __val)
+       void * [1mmemccpy [22m(void *, const void *, int, size_t)
+       void * [1mmemchr [22m(const void *, int, size_t) __ATTR_PURE__
+       int [1mmemcmp [22m(const void *, const void *, size_t) __ATTR_PURE__
+       void * [1mmemcpy [22m(void *, const void *, size_t)
+       void * [1mmemmem [22m(const void *, size_t, const void *, size_t) __ATTR_PURE__
+       void * [1mmemmove [22m(void *, const void *, size_t)
+       void * [1mmemrchr [22m(const void *, int, size_t) __ATTR_PURE__
+       void * [1mmemset [22m(void *, int, size_t)
+       char * [1mstrcat [22m(char *, const char *)
+       char * [1mstrchr [22m(const char *, int) __ATTR_PURE__
+       char * [1mstrchrnul [22m(const char *, int) __ATTR_PURE__
+       int [1mstrcmp [22m(const char *, const char *) __ATTR_PURE__
+       char * [1mstrcpy [22m(char *, const char *)
+       int [1mstrcasecmp [22m(const char *, const char *) __ATTR_PURE__
+       char * [1mstrcasestr [22m(const char *, const char *) __ATTR_PURE__
+       size_t [1mstrcspn [22m(const char *__s, const char *__reject) __ATTR_PURE__
+       char * [1mstrdup [22m(const char *s1)
+       size_t [1mstrlcat [22m(char *, const char *, size_t)
+       size_t [1mstrlcpy [22m(char *, const char *, size_t)
+       size_t [1mstrlen [22m(const char *) __ATTR_PURE__
+       char * [1mstrlwr [22m(char *)
+       char * [1mstrncat [22m(char *, const char *, size_t)
+       int [1mstrncmp [22m(const char *, const char *, size_t) __ATTR_PURE__
+       char * [1mstrncpy [22m(char *, const char *, size_t)
+       int [1mstrncasecmp [22m(const char *, const char *, size_t) __ATTR_PURE__
+       size_t [1mstrnlen [22m(const char *, size_t) __ATTR_PURE__
+       char * [1mstrpbrk [22m(const char *__s, const char *__accept) __ATTR_PURE__
+       char * [1mstrrchr [22m(const char *, int) __ATTR_PURE__
+       char * [1mstrrev [22m(char *)
+       char * [1mstrsep [22m(char **, const char *)
+       size_t [1mstrspn [22m(const char *__s, const char *__accept) __ATTR_PURE__
+       char * [1mstrstr [22m(const char *, const char *) __ATTR_PURE__
+       char * [1mstrtok [22m(char *, const char *)
+       char * [1mstrtok_r [22m(char *, const char *, char **)
+       char * [1mstrupr [22m(char *)
+
+[1mDetailed Description[0m
+[1mAuthor[0m
+       Generated automatically by Doxygen for avr-libc from the source code.
+
+Version 2.0.0                                               11 May 2022                                                [4mstring.h[24m(3)

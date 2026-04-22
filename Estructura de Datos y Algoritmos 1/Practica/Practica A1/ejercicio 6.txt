@@ -1,0 +1,24 @@
+1)
+[1, 15, 3, 4, 8]
+El peor caso es que el maximo este al final, y el maximo del array es pico.
+
+Procedemos por induccion sobre el largo del array (n)
+
+* n=1 es pico, 0 es pico
+* Paso inductivo: 
+H.I: Si a es un arreglo de tamaño n, a tiene pico
+
+Si a[0]>a[1]; 0 es pico
+SI no por HI a[1:n] tiee pico
+
+Costo
+
+C(g,[a0])=1
+C(g,[a0,..., an])= 1 + c(g, [a0,...,an/2]) = 1 +(1 + C(g, [a0,...,an/4]))=
+...= lg2(n)=k
+se hacen k pasos
+
+
+C(f,[a0])=1
+C(f,[a0,...,an])=1 + C(f,[a1,...,an])= 1 + C(f,[a2,...,an])= ... = (n-1) + C(f,[an])
+

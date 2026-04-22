@@ -1,0 +1,3 @@
+(5/(4-(3-(2-1))))
+(2-1)=a->3-a=b->4-b=c->5/
+se corresponde con la estructura de pilas

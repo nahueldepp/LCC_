@@ -1,0 +1,20 @@
+{
+    "files.associations": {
+        "stdint.h": "c",
+        "glist.h": "c",
+        "contacto.h": "c",
+        "stdio.h": "c",
+        "array": "c",
+        "string": "c",
+        "funciones.h": "c",
+        "listas.h": "c",
+        "assert.h": "c",
+        "errno.h": "c",
+        "parser.h": "c",
+        "tablahash.h": "c",
+        "utils.h": "c",
+        "string.h": "c",
+        "stdlib.h": "c",
+        "search.h": "c"
+    }
+}

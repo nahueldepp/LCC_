@@ -1,0 +1,387 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{fullpage}
+\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{lastpage}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{mathrsfs}
+\usepackage{xcolor}
+\usepackage{multirow,makecell}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{cancel}
+\usepackage[spanish,english]{babel}
+\usepackage{hyperref}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{subcaption} % subfigures y subcaption
+\usepackage{tikz} % Listas enlazadas
+\usepackage[shortlabels]{enumitem}
+\usepackage[figurename=Figura,tablename=Tabla]{caption} % Nombre de las figuras
+\usetikzlibrary{positioning,arrows.meta,shadows}
+% definitions for list
+\newcommand\boxsize{6mm}
+\tikzset
+  {cell/.style=
+    {inner sep=0pt,minimum width=\boxsize,minimum height=\boxsize,
+     drop shadow,fill=white},
+   ptr/.style={Circle-stealth,shorten <=-1.5pt}
+  }
+
+\hypersetup{%
+  colorlinks=true,
+  linkcolor=blue,
+  linkbordercolor={0 0 1}
+}
+
+\lstdefinestyle{miEstiloCodigo}{
+  language= C, % Lenguaje del cÃ³digo
+  basicstyle=\ttfamily\small, % Fuente y tamaÃ±o
+  keywordstyle=\color{blue}, % Estilo para palabras clave
+  commentstyle=\color{green!60!black}, % Estilo para comentarios
+  stringstyle=\color{orange}, % Estilo para cadenas de texto
+  numbers=left, % NÃºmeros de lÃ­nea en la izquierda
+  numberstyle=\tiny\color{gray}, % Estilo de nÃºmeros de lÃ­nea
+  stepnumber=1, % Incremento de nÃºmeros de lÃ­nea
+  frame=single, % Borde alrededor del cÃ³digo
+  breaklines=true, % Romper lÃ­neas largas
+  showstringspaces=false % No mostrar espacios en cadenas
+}
+
+\setlength{\parindent}{0.0in}
+\setlength{\parskip}{0.05in}
+
+\pagestyle{fancyplain}
+\headheight 35pt
+\lhead{LCC - FCEIA - UNR}
+\chead{\textbf{\Large Informe Trabajo PrÃ¡ctico Final\\Sistemas Operativos 1}}
+\rhead{5to cuatrimestre}
+\lfoot{}
+\cfoot{}
+\rfoot{\small\thepage}
+\headsep 1.5em
+
+\newcommand{\code}[1]{\texttt{#1}}
+\setcounter{tocdepth}{1}
+\title{\textbf{Informe Trabajo PrÃ¡ctico Final}}
+\author{Juan Bautista Figueredo, Bautista JosÃ© Peirone}
+\date{2023}
+\begin{document}
+\pagenumbering{gobble}
+\maketitle
+\centerline{\LARGE{Sistemas Operativos 1}}
+\thispagestyle{empty}
+\newpage
+\pagenumbering{arabic}
+\setcounter{tocdepth}{2}
+
+\tableofcontents
+\newpage
+
+\section{INTRODUCCIÃ“N}
+
+Como trabajo prÃ¡ctico final de la materia, se requiere implementar una \textbf{memcached}, es decir, un sistema de memoria cachÃ© con pares Clave-Valor 
+accesibles por la red. AdemÃ¡s, se debiÃ³ implementar una interfaz en erlang para acceder a la memcached.\\
+
+El siguiente informe tiene como propÃ³sito explicar y detallar las decisiones tomadas a la hora de implementar la memcached.\\
+
+Para compilar y correr el programa se puede referir al archivo \code{README.md} en el codigo fuente.
+
+\section{MEMCACHED}
+\subsection{Interfaz bÃ¡sica}
+La memcached funciona almacenando datos con el formato Clave-Valor, tal que a cada clave almacenada le corresponde un Ãºnico valor. La memcached puede ser accesible en dos modos distintos, ambos con distintos protocolos: El modo de texto y el modo binario.\\
+La memcache ofrece como interfaz al usuario 4 operaciones:\\
+\begin{itemize}
+    \item \textbf{PUT} C V: La operaciÃ³n PUT agrega el valor V a la memcache, con la clave C. Realizar un PUT sobre una clave C ya existente, reemplazarÃ¡ el valor anterior por el nuevo valor V.
+    \item \textbf{GET} C: Utilizando GET, el usuario puede conseguir el valor asociado a la clave C almacenado en la memcached.
+    \item \textbf{DEL} C: Mediante DEL, se puede eliminar de la memcache el par Clave-Valor relacionado con la clave C.
+    \item \textbf{STATS} : La funciÃ³n STATS provee al usuario informaciÃ³n sobre las estadisticas actuales de la memcache, es decir la cantidad de operaciones realizadas y cuantos elementos se encuentran en la memcache.
+\end{itemize}
+
+\subsection{Estructura principal}
+Para representar la memcache se implementaron una serie de estructuras de datos. Principalmente y a grandes rasgos, la memcache esta compuesta por una tabla hash y una cola de prioridad.\\
+Para poder combinar estas estructuras y llevar a cuenta de distintos estados e informaciÃ³n importante de la memcache (como las estadÃ­sticas de uso o el tamaÃ±o) se encapsulÃ³ la estructura general de la memcache en la estructura \code{Cache}:\\
+
+\begin{lstlisting}[style=miEstiloCodigo, caption= DefiniciÃ³n de estructura Cache, captionpos=b]
+struct _Cache {
+  List *buckets;
+  LRUQueue queue;
+  struct Stats text_stats, bin_stats;
+  pthread_rwlock_t *row_locks;
+  pthread_mutex_t ts_lock, bs_lock;
+  uint32_t nregions, size;
+};
+\end{lstlisting}
+
+En esta estructura se almacena la informaciÃ³n vital para la memcache, los parÃ¡metros \code{buckets}, \code{nregions} y \code{size} corresponden a la estructura principal de la tabla hash, 
+mientras que \code{queue} es la cola de prioridad relacionada con la polÃ­tica de desalojo implementada (LRU). Las estructuras tipo \code{Stats} almacenan la informaciÃ³n de uso de la 
+memcache para cada modo por separado. Por Ãºltimo, la estructura \code{Cache} tambiÃ©n posee la informaciÃ³n sobre los "locks" implementados para proteger a la memcache de problemas de 
+concurrencia.\\
+
+\subsection{Tabla Hash}
+\subsubsection{ImplementaciÃ³n}
+Como se comentÃ³ anteriormente, la memcache contiene una tabla hash que se utiliza para obtener una rÃ¡pida bÃºsqueda de las claves.\\
+Para el manejo de las colisiones se optÃ³ por un enfoque de encadenamiento, principalmente por la facilidad de implementar concurrencia en esta. Esto resultÃ³ en 
+que la estructura principal de la tabla sea 
+un arreglo de listas doblemente enlazadas, este arreglo se encuentra en la estructura \code{Cache}, bajo el nombre de \code{buckets}. El tamaÃ±o de la tabla esta dado por la variable 
+\code{size}. Cada elemento del arreglo, es decir cada lista doblemente enlazada de la tabla hash fue implementado con un nodo centinela, facilitando la actualizaciÃ³n de cada lista.\\
+Los nodos de las listas, \code{LLNode}, estÃ¡n compuestos por dos atributos, los datos a almacenar y la prioridad del nodo. Los datos se almacenan encapsulados en una estructura \code{Data},
+que contiene informaciÃ³n sobre el modo del dato (binario o texto), la clave, la longitud de la clave y el valor y la longitud del valor. La prioridad se consigue de la cola de prioridad 
+y esta relacionada con la polÃ­tica de desalojo, que se verÃ¡ mÃ¡s adelante.\\
+
+\begin{lstlisting}[style=miEstiloCodigo, caption= Estructura Data y nodos de listas enlazadas , captionpos=b]
+typedef struct {
+  char *key, *val;
+  uint64_t klen, vlen;
+  char mode;
+} Data;
+
+struct _LLNode {
+  Data data;
+  LRUNode lru_priority;
+  struct _LLNode *prev, *next;
+};
+\end{lstlisting}
+Para la funciÃ³n de hash en si se utilizÃ³ una funciÃ³n hash multiplicativa, en particular, se tomo la propuesta por Kernigan y Ritchie (The C programming language, second edition), y se hashea segÃºn el valor ingresado.\\
+
+\subsubsection{ProtecciÃ³n de la tabla hash}
+La tabla hash de la memcache es una estructura que se accede constantemente por distintos hilos, luego cada fila es una \textbf{regiÃ³n crÃ­tica} susceptible a 
+problemas de \textbf{race condition}. Bloquear toda la tabla resulta en aplicar \textbf{exclusiÃ³n mutua} sobre una regiÃ³n demasiado amplia, mientras que dedicar 
+un sistema de exclusiÃ³n mutua para cada fila implicarÃ­a un gasto elevado de recursos. Por tanto, se tomÃ³ la decisiÃ³n de particionar la tabla en regiones.\\
+
+La idea es que cada regiÃ³n abarque una porciÃ³n arbitraria de la tabla, y que cada una cuente con su lock. Estos locks fueron implementados con los que provee POSIX para lectura/escritura(\code{pthread\_rwlock\_t}). De este modo, dos hilos que quieran acceder a la tabla en regiones diferentes pueden hacerlo sin problema de concurrencia, sin embargo, dos hilos que buscan escribir en la misma regiÃ³n, se verÃ¡n obligados a esperar a que uno termine para que el otro pueda comenzar. Cabe destacar que al ser un lock de lectura/escritura, un hilo puede acceder a leer sobre una regiÃ³n si no hay ningÃºn hilo escribiendo, lo que resulta en que mÃºltiples hilos puedan acceder a leer al mismo tiempo.\\
+
+\subsection{PolÃ­tica de desalojo}
+La memcache cuenta con una limitaciÃ³n en la cantidad memoria que puede ser asignada para su funcionamiento, esto implica que puede darse que luego de un uso intensivo, se quede sin memoria para guardar nuevos pares Clave-Valor. Una soluciÃ³n es implementar una polÃ­tica de desalojo en la cual al quedarse sin memoria, se desalojen datos almacenados (se eliminen de la memcache) para dejar lugar a los nuevos datos.
+
+\subsubsection{PolÃ­tica LRU}
+Para este trabajo se optÃ³ por una polÃ­tica \textbf{LRU} (Least Recently Used) en la cual cada nodo de la tabla tiene una prioridad que se modifica segÃºn el orden en el cual se va accediendo a estos. Esto implica que al momento de desalojar datos, se eligen los nodos que hayan sido accedidos por Ãºltima vez hace mucho tiempo. 
+
+\subsubsection{Cola de prioridad}
+La polÃ­tica \textbf{LRU} es implementada en nuestra memcache mediante el uso de una cola de prioridad \code{LRUQueue}. Esta estÃ¡ implementada mediante una lista doblemente enlazada y cuenta con punteros al primer y Ãºltimo elemento.\\
+La cola esta compuesta por nodos \code{LRUNode} que llevan informaciÃ³n del dato que almacenan, como el Ã­ndice de este en la tabla hash y el dato en sÃ­. TambiÃ©n se tiene informaciÃ³n sobre el siguiente nodo y sobre el anterior.\\
+\begin{lstlisting}[style=miEstiloCodigo, caption= Estructura LRUNode y Estructura LRUQueue, captionpos=b]
+struct _LRUNode {
+  unsigned idx;
+  List data_node;
+  struct _LRUNode *prev, *next;
+};
+
+struct _LRUQueue {
+  pthread_mutex_t lock;
+  struct _LRUNode *first, *last;
+};
+\end{lstlisting}
+Debido a la polÃ­tica \textbf{LRU}, el simple hecho de acceder a un dato (con un GET, por ejemplo) es suficiente para cambiar la prioridad del nodo. Esta "prioridad" se representa en la cola con la posiciÃ³n en la que cada nodo se encuentra, un nodo con prioridad baja (es decir, que es mas propenso a ser desalojado) se encontrarÃ¡ en las cercanÃ­as del comienzo de la cola, mientras que los nodos accedidos recientemente estarÃ¡n ubicados en el final. De este modo, actualizar la prioridad de un nodo se reduce a quitar el nodo de su posiciÃ³n actual y llevarlo al final de la cola.
+Desalojar un elemento, sin embargo, no es tan simple, ya que el desalojo (se verÃ¡ mas adelante) no depende de las operaciones de la interfaz y se produce automÃ¡ticamente, esto puede llegar a provocar que el nodo que actualmente tiene la menor prioridad (el primer nodo de la cola) estÃ© siendo utilizado por otro hilo y no se ha actualizado su prioridad todavÃ­a. Por esto el desalojo no siempre elimina el de menor prioridad sino que se desaloja el nodo con menor prioridad que no este siendo utilizado por otro hilo.\\
+A diferencia de la tabla hash, la cola no puede ser fraccionada en regiones ya que al momento de realizar una actualizaciÃ³n de prioridad, se puede quitar un elemento de cualquier lado de la cola y llevarlo al final. Esto provoca que la Ãºnica manera de proteger la estructura contra problemas de concurrencia es con un Ãºnico lock que bloquee la cola entera.
+Esto puede parecer poco eficiente ya que los hilos solamente pueden acceder de a uno, sin embargo, esto se compensa con la velocidad de desalojo y la simplicidad de la polÃ­tica.
+
+\subsubsection{RealizaciÃ³n del desalojo}
+El desalojo ocurre cuando la memcache no tiene mas memoria para poder seguir agregando datos y funcionando. Esto se traduce a que al momento de pedir memoria al sistema operativo tanto para crear estructuras como para almacenar datos nuevos el sistema no puede brindarnos mas memoria para trabajar (ya que la memoria estÃ¡ limitada). Para capturar estos casos y realizar el correspondiente desalojo se implementÃ³ una interfaz sobre la instrucciÃ³n \code{malloc} que nos permite identificar cuando la memcache agotÃ³ la memoria y debemos desalojar. A esta interfaz la llamamos: \code{dalloc}.\\
+\begin{lstlisting}[style=miEstiloCodigo, caption= ImplementaciÃ³n de dalloc, captionpos=b]
+void* dalloc(size_t size) {
+  void* ptr = malloc(size);
+  while (!ptr && !lru_empty(cache_get_lru_queue(cache))) {
+    lru_dismiss(cache); //Desalojo de la cola LRU
+    ptr = malloc(size);
+  }
+  return ptr;
+}
+\end{lstlisting}
+En pocas palabras, \code{dalloc} se encarga de intentar asignar una cantidad especificada de bytes para un elemento, tal y como lo hace \code{malloc}, sin embargo si esta asignaciÃ³n falla, \code{dalloc} intenta realizar desalojos de la cola hasta poder conseguir suficiente espacio libre para poder asignar la memoria requerida. La interfaz \code{dalloc} es usada en la mayorÃ­a de la memcache para conseguir un mayor control sobre la memoria utilizada por la memcache.\\
+\textbf{NOTA: } Todas las operaciones de la interfaz \textbf{LRU} garantizan seguridad sobre el acceso a la cola por mÃºltiples hilos.
+
+\subsection{ImplementaciÃ³n de operaciones}
+La implementaciÃ³n de las operaciones bÃ¡sicas sobre la memcache se lograron combinando las interfaces de la tabla hash con la cola de prioridad de desalojo.
+\subsubsection{OperaciÃ³n PUT}
+La operaciÃ³n PUT puede tener 2 posibles resultados, crear un nuevo nodo Clave-Valor o actualizar un nodo Clave-Valor cambiando el Valor por el valor ingresado.\\
+Para cualquier caso, el primer paso es verificar la existencia de la clave en la memcache. Si esta no se encuentra, debemos crear un nuevo nodo Clave-Valor. Para esto primero se crea el nodo y se inserta en la tabla hash, consiguiendo el Ã­ndice en segÃºn la llave. Con este Ã­ndice se crea un nodo en la cola \textbf{LRU} y se consigue la prioridad del nodo. Como Ãºltimo paso se actualizan las estadÃ­sticas de la memcache y se agrega una clave mas.\\
+En el caso de que la clave ya se encuentre, simplemente se accede al nodo y se modifica la estructura que contiene la informaciÃ³n (estructura \code{Data}). Luego de esto se actualiza la prioridad mediante funciones de la interfaz \textbf{LRU}.\\
+En ambos casos se registra en las estadÃ­sticas de la memcache el uso de la operaciÃ³n PUT.\\
+Si la operaciÃ³n fue realizada correctamente, el cliente recibe el mensaje de confirmaciÃ³n "OK", sino se devuelve el cÃ³digo de error correspondiente.
+\subsubsection{OperaciÃ³n GET}
+La operaciÃ³n GET esta implementada de una manera relativamente sencilla. Como primer paso se busca en la memcache si la clave a buscar existe. Si lo hace, se copia el valor en un buffer y se retorna. Esta copia es implementada con el propÃ³sito de proteger la respuesta de la operaciÃ³n a posibles modificaciones del valor antes de que la respuesta haya sido entregada completamente al cliente.
+Se incrementa en las estadÃ­sticas la cantidad de operaciones GET utilizadas.\\
+En caso del correcto funcionamiento, se envÃ­a al cliente el mensaje "OK valor", siendo "valor" el valor correspondiente a la clave recibida. En caso contrario, se retorna un cÃ³digo de error.
+\subsubsection{OperaciÃ³n DEL}
+La implementaciÃ³n de la operaciÃ³n DEL no es muy diferente a la implementaciÃ³n de la operaciÃ³n GET. Se verifica que la clave ingresada pertenezca a la memcache y, si es asÃ­ se procede a eliminar el nodo de la tabla hash. Luego, se remueve el nodo de la cola \textbf{LRU} y se liberan los nodos.\\
+Se actualizan los valores de las estadÃ­sticas.\\
+Luego de una operaciÃ³n exitosa, el cliente recibe el mensaje "OK". Si no tuvo exito se envia un cÃ³digo de error.
+\subsubsection{OperaciÃ³n STATS}
+La operaciÃ³n STATS tiene un comportamiento diferente al resto de las operaciones.  Como se puede observar en la estructura \code{Cache} se almacenan dos estructuras del tipo \code{Stats}, una llamada \code{text\_stats} y otra llamada \code{bin\_stats}.\\
+\begin{lstlisting}[style=miEstiloCodigo, caption= Estructura Stats, captionpos=b]
+struct Stats {
+  uint64_t get, put, del, keys;
+};
+\end{lstlisting}
+
+Estas simples estructuras \code{Stats} sirven para almacenar las estadÃ­sticas de la memcache para cada modo de uso. 
+En cada llamada a las demÃ¡s operaciones se incrementa el contador correspondiente a cada operaciÃ³n. \\
+En la llamada a la operaciÃ³n STATS, se retornan los valores almacenados en la estructura correspondiente al modo en el cual se llamo a la operaciÃ³n. La respuesta que el cliente recibe tiene la siguiente forma:\\
+"OK PUTS=nputs DELS=ndels GETS=ngets KEYS=nkeys"
+\subsubsection{CÃ³digos de error}
+Las operaciones sobre la memcache no siempre resultan exitosas, pueden surgir errores por distintas razones, imposibilitando que la operaciÃ³n se lleve a cabo. Cuando esto sucede, el cliente recibe un cÃ³digo de error que especifica el tipo de error que ocurriÃ³. Estos cÃ³digos son:
+\begin{itemize}
+    \item \textbf{EINVALID: } El comando ingresado no es vÃ¡lido.
+    \item \textbf{ENOTFOUND: } La clave a buscar no ha sido encontrada en la memcache.
+    \item \textbf{EBINARY: } Sucede cuando un cliente en modo texto intenta acceder a un valor almacenado en modo binario.
+    \item \textbf{EBIG: } La entrada del modo texto supera los 2048 caracteres.
+    \item \textbf{EUNK: } El comando ingresado no existe.
+    \item \textbf{EOOM: } Este error ocurre cuando la memcache ocupa toda la memoria disponible y no es posible hacer desalojos.
+\end{itemize}
+\subsection{Protocolos de Entrada / Salida}
+Para la comunicaciÃ³n entre el cliente y el servidor (memcache) se pactan distintos protocolos sobre la forma de los mensaje que cada uno debe mandar para mantener una comunicaciÃ³n efectiva.\\
+Como explicarÃ¡ mas adelante, la comunicaciÃ³n se lograrÃ¡ utilizando sockets. Esto implica que si el cliente quiere mandar un mensaje al servidor, debe escribir su mensaje en el socket y el servidor debe leer el mensaje del socket para procesarlo y viceversa. Esta comunicaciÃ³n no siempre es perfecta, por lo que puede aparecer el efecto del \textbf{ruido}, que puede alterar la velocidad en la que se escribirÃ¡ la informaciÃ³n en el socket (Al ser comunicaciÃ³n por protocolo TCP se asegura que los bits enviados llegaran en orden). La alteraciÃ³n causa que la lectura al socket por parte del servidor se dificulte y surge la posibilidad de leer mensajes que todavÃ­a no estÃ¡n completos.\\
+De aquÃ­, surge la necesidad de crear una estructura \code{ClientData} que serÃ¡ Ãºnica para cada cliente (no para cada hilo) y contendrÃ¡ informaciÃ³n necesaria para mantener un contexto del estado de la comunicaciÃ³n entre el cliente y el servidor. 
+\vspace{1cm}
+\begin{lstlisting}[style=miEstiloCodigo, caption= Estructura ClientData, captionpos=b]
+struct ClientData {
+  char *buffer; //buffer del mensaje
+  long buf_size; //cantidad de bytes dedicados al buffer
+  long current_idx; //longitud del mensaje actual almacenado en el buffer
+  int client_fd; //file descriptor del socket para comunicacion
+  int mode; //modo del cliente
+};
+\end{lstlisting}
+De este modo, si se llega a producir ruido en la comunicaciÃ³n entre el cliente y el servidor, la estructura del cliente almacenarÃ¡ el mensaje incompleto y a medida que los fragmentos del mensaje van llegando se agregan a la estructura hasta construir un mensaje vÃ¡lido.\\ 
+Esta construcciÃ³n de un mensaje vÃ¡lido cambia segÃºn el modo en el cual el cliente se conecta con el servidor (modo texto o binario).
+\subsubsection{Protocolo de texto}
+Los mensajes de modo texto se caracterizan por la existencia de un delimitador '\textbackslash n' al final de cada mensaje. De este modo, un posible mensaje del cliente puede tener la siguiente forma:
+\begin{equation*} 
+\code{GET}\quad clave\backslash n\\
+\end{equation*}
+Del mismo modo, una respuesta del servidor puede ser:
+\begin{equation*}
+\code{OK}\quad valor\backslash n\\
+\end{equation*}
+Esta convenciÃ³n facilita el trabajo a la hora del parseo de la entrada vÃ¡lida. Si se leyÃ³ un mensaje del socket en modo texto pero no contiene el carÃ¡cter '\textbackslash n' entonces el mensaje no esta completo y por lo tanto se almacena el mensaje actual en la estructura \code{ClientData} y se vuelve a esperar a que el resto del mensaje llegue al socket.\\
+En caso de que el mensaje si contiene el carÃ¡cter delimitador, se puede procesar correctamente el mensaje y determinar que operaciÃ³n se debe ejecutar.\\
+Si la operaciÃ³n no es vÃ¡lida, o el mensaje recibido tiene mas de 2048 caracteres, se devuelve un cÃ³digo de error.
+\subsubsection{Protocolo binario}
+Contrariamente al protocolo de texto, los mensajes en modo binario no contienen ningÃºn tipo de delimitador que marquen el final de un mensaje. Como alternativa, el protocolo binario especifica que antes de cada argumento se incluyan 4 bytes que marquen la longitud (en bytes) del argumento a consumir.Ademas, las operaciones y cÃ³digos de error se encuentran cÃ³dificadas de modo que todas pueden ser representadas con un byte, en particular, el primer byte del mensaje. De esta manera, los mensajes tendrÃ¡n la siguiente forma:
+\begin{equation*}
+\code{Op}\quad Len1\quad Arg1
+\end{equation*}
+Para parsear los mensajes en modo binario debemos controlar constantemente la cantidad de bytes que fueron leÃ­dos y almacenados en el buffer de la estructura \code{ClientData}. Si se pudo leer al menos el primer byte del mensaje, entonces se puede determinar la operaciÃ³n a realizar y por lo tanto, la cantidad de argumentos a consumir. Si la operaciÃ³n es STATS, no se consume ningun argumento, si en cambio la operaciÃ³n es GET o DEL, se esperarÃ¡ un solo argumento (la clave a buscar), Como Ãºltimo caso, la operaciÃ³n PUT requerirÃ¡ que se consuman 2 argumentos (La clave y valor).
+Luego, segÃºn la cantidad de argumentos, se procede a intentar leer los siguientes 4 bytes que marcan la longitud. Si no hay suficientes bytes, el mensaje no esta completo y se vuelve a esperar a que el resto mensaje llegue al socket para luego volver a procesar el mensaje completo. Si los hay, se consume la longitud $n$ (La longitud esta almacenada en modo big-endian, por lo que para leerla correctamente se debe transformar su endianness), y se intenta nuevamente consumir ahora $n$ bytes del buffer. Si no los hay, el mensaje no esta completo y el comportamiento es el mismo que al intentar leer la longitud. En el caso que si se pueda consumir esa cantidad de bytes, se verifica del mismo modo que se puedan leer el resto de los argumentos.\\
+Una vez que todos los argumentos hayan sido leÃ­dos correctamente se almacenan y se procede a ejecutar la operaciÃ³n especificada.\\
+\textbf{NOTA: } La no existencia del delimitador en el protocolo binario no permite distinguir entre un mensaje mal formado y un mensaje incompleto (que el resto del mensaje todavÃ­a no llego).
+\section{MANEJO DE CONEXIONES}
+Un punto clave de la memcache es lograr que esta sea accesible mediante la red por mÃºltiples clientes de manera simultÃ¡nea. Para esto, se utilizan mÃºltiples hilos, sin embargo, no se utiliza un hilo por cada conexiÃ³n al servidor, sino que solamente se utiliza una cantidad fija de hilos, en particular, la cantidad de hilos de hardware del sistema en el cual se esta corriendo la memcache. De esta manera, un hilo atenderÃ¡ a mas de un cliente. 
+\subsection{UtilizaciÃ³n de Epoll}
+Para administrar la asignaciÃ³n de clientes a hilos se decidiÃ³ usar la interfaz provista Linux, Epoll.
+Epoll nos permite multiplexar la entrada y salida de varios sockets, tanto los de escucha como los sockets de las conexiones TCP establecidas con los clientes. De esta forma, un hilo es
+despertado solo cuando se puede realizar una operacion sobre alguno de estos sockets, en especial nos interesan operaciones de lectura, luego usamos los eventos \code{EPOLLIN} de epoll.\\
+\textbf{Sockets de escucha: }Los sockets de escucha son dos, aquel para el modo texto y el de binario. La idea que implementamos consiste en un hilo que es despertado por actividad en un
+socket de escucha debe aceptar todas las conexiones encoladas en este socket. Para esto, configuramos ambos sockets de escucha como no bloqueantes y el evento de escucha en epoll es de 
+modo edge-triggered (\code{EPOLLET}). Este modo harÃ¡ que epoll solo genere un evento cuando no habÃ­a clientes encolados y de pronto llegan conexiones, y con la bandera \code{EPOLLEXCLUSIVE} nos aseguramos que un Ãºnico hilo se despierta para encargarse del trabajo.\\
+\textbf{Sockets de clientes:} Para evitar race conditions de sockets o que multiples hilos se despierten por distintos eventos de uno, configuramos epoll para usar el modo One Shot 
+(\code{EPOLLONESHOT}). Con este modo, cuando se termina de atender la entrada recibida de un cliente, se vuelve a aÃ±adir el socket a epoll para que vuelva a generar un evento cuando haya
+nueva informaciÃ³n entrante.
+
+\subsection{ConexiÃ³n a puertos privilegiados}
+Para la conexiÃ³n entre el cliente y el servidor, se denominan ciertos puertos para cada modo de conexiÃ³n.
+De manera por defecto, los puertos son el 8888 para el modo texto y el puerto 8889.\\
+Sin embargo la memcache permite al usuario conectarse a los puertos privilegiados 888 para modo texto y 889 para modo binario. Estos puertos privilegiados estÃ¡n protegidos por el sistema y 
+no pueden ser accedidos por cualquier usuario ya que un mal uso de ellos puede causar problemas en el sistema operativo. En esta implementaciÃ³n, el usuario puede acceder a la conexiÃ³n a 
+los puertos privilegiados si ejecuta la memcache con privilegios "sudo".\\
+Para evitar problemas con el mal uso de los puertos, los privilegios de sudo solamente se usan para realizar la conexiÃ³n con los puertos, luego de realizar la conexiÃ³n correctamente, se 
+bajan los privilegios y se pierde el poder de sudo.\\
+Esto se logrÃ³ utilizando el \code{uid} (user id) del proceso que ejecuta la memcache para determinar si se cuenta o no con los permisos de sudo (es decir, si el \code{uid} es 0). Si se 
+ejecutÃ³ con sudo y se pudo conectar a los puertos privilegiados, solo queda bajar los privilegios, esto se logra cambiando el \code{uid} al original del usuario que llamo a sudo. La 
+variable de entorno \code{SUDO\_UID} mantiene un registro de este \code{uid}, por lo que simplemente cambiando el \code{uid} actual por el almacenado en \code{SUDO\_UID} es suficiente para 
+eliminar los privilegios y poder trabajar de forma segura en los puertos. La funciÃ³n \code{getenv()} permite recuperar el valor de la variable de entorno.\\
+\textbf{NOTA: } En el usuario \code{root}, la variable de entorno \code{SUDO\_UID} no existe, lo que implica que no se podrÃ¡n bajar los privilegios. Por esto se implementÃ³ que el programa 
+no puede ser ejecutado desde \code{root} e intentar hacerlo no tendrÃ¡ ningÃºn resultado.
+
+\section{INTERFAZ EN ERLANG}
+Se construyÃ³ en erlang una interfaz de la memcache que facilita el uso de esta y brinda una capa de abstracciÃ³n por sobre el cÃ³digo fuente del programa en si.\\
+La interfaz exporta el mÃ³dulo \code{client} que brinda al usuario 6 funciones para lograr una comunicaciÃ³n Ã³ptima con la memcache. Estas son:
+\begin{itemize}
+    \item \textbf{start/2:} Inicializa y conecta el cliente con el servidor.
+    \item \textbf{put/3:} Agrega o modifica un par Clave-Valor a la memcache.
+    \item \textbf{get/2:} Busca el Valor relacionado a la Clave a buscar.
+    \item \textbf{del/2:} Elimina el par Clave-Valor de la memcache, recibe la Clave del par a eliminar. 
+    \item \textbf{stats/1:} Muestra las estadÃ­sticas de uso de la memcache.
+    \item \textbf{exit/1:} Finaliza la conexiÃ³n con la memcache y cierra el cliente.
+\end{itemize}
+    
+El cliente en erlang provee una interfaz en la que el usuario se comunica con la memcache utilizando texto, sin embargo, el cliente realiza una conexiÃ³n en modo binario.\\
+
+\subsection{ImplementaciÃ³n de la interfaz}
+\subsubsection{Manejo de hilos en erlang}
+La estructura principal de la interfaz en erlang se basa en la existencia de un hilo trabajador que se encargarÃ¡ de manejar la conexiÃ³n entre el usuario y el servidor. Luego de haber aceptado la conexiÃ³n, se invoca un hilo que permanecerÃ¡ en constante escucha a pedidos de las distintas operaciones. Es por esto que las operaciones deben utilizar el identificador de hilo \code{Id} para saber quÃ© cliente es el que esta invocando a la funciÃ³n.\\
+
+\subsubsection{OperaciÃ³n start/2}
+La operaciÃ³n \code{start/2} se encarga de conectar al cliente con el servidor a travÃ©s del puerto dedicado a la comunicaciÃ³n en modo binario.
+La operaciÃ³n toma dos argumentos, el primero es la direcciÃ³n IP de el lugar en donde se esta ejecutando el servidor. El segundo argumento es el puerto a conectar el cliente. Puede ser 8889
+si se quiere realizar una conexion a un servidor comÃºn, u 889 si se quiere conectar a un servidor corriendo en los puertos privilegiados.\\
+
+En cuanto al modo de conexiÃ³n al puerto, se implementÃ³ una conexiÃ³n en modo pasivo, logrando un mayor control sobre las informaciÃ³n que se lee del socket cuando el servidor manda una respuesta.\\
+La operaciÃ³n crea un actor que se encargarÃ¡ de enviar y recibir los mensajes al y desde el servidor. La funciÃ³n retorna el identificador de este hilo, que deberÃ¡ ser utilizado en las demÃ¡s operaciones de la interfaz.\\
+Una llamada correcta a la operaciÃ³n tiene la siguiente forma:
+\begin{equation*}
+    \code{Id = client:start(Ip, Port).}
+\end{equation*}
+
+\subsubsection{OperaciÃ³n put/3}
+La operaciÃ³n \code{put/3} la implementaciÃ³n de la funciÃ³n toma como argumentos, el identificador del hilo \code{Id}, y los elementos \code{clave} y \code{valor}. La funciÃ³n toma estos valores y los convierte a una cadena binaria. Esta transformaciÃ³n es posible gracias al uso de la funciÃ³n \code{term\_to\_binary()} de erlang, que permite a erlang codificar distintos tipos de datos a una cadena de bits, agregando headers necesarios para la propia decodificaciÃ³n de erlang. Finalmente se contruye una cadena de bits que contiene tanto el cÃ³digo de la operaciÃ³n \code{PUT} (11), la longitud del primer argumento (en big endian, y ocupando 4 bytes), la cadena de bits resultante de la transformaciÃ³n de la clave, y anÃ¡logamente, se incluye la informaciÃ³n para el valor.\\
+Un ejemplo de llamada a la operaciÃ³n es:
+\begin{equation*}
+    \code{client:put(Id, Clave, Valor).}
+\end{equation*}
+
+\subsubsection{OperaciÃ³n get/2 y del/2} La operaciÃ³n \code{get/2} y \code{del/2} no varÃ­an demasiado en implementaciÃ³n. Ambas funciones esperan dos valores, el primero es el identificador 
+de hilo \code{Id}, mientras que el segundo es la \code{clave} del elemento a buscar. Del mismo modo que con la funciÃ³n \code{put/2}, se hace uso de la funciÃ³n \code{term\_to\_binary()} 
+para convertir la clave ingresada en una cadena de bits. Luego, se completa la cadena incluyendo el cÃ³digo de operaciÃ³n (12 para el \code{DEL} y 13 para el \code{GET}) y el largo (big 
+endian y ocupando 4 bytes) de la clave.\\
+La funciones se invocan de la siguiente manera:
+\begin{equation*}
+\code{client:get(Id, Clave).}
+\end{equation*}
+\begin{equation*}
+\code{client:del(Id, Clave).}
+\end{equation*}
+
+\subsubsection{OperaciÃ³n stats/1}
+\code{stats/1}, a diferencia del resto de las operaciones sobre la memcache, no requiere de ningÃºn argumento ademÃ¡s del identificador del hilo. Esta funciÃ³n envÃ­a solamente la cadena de bits que codifica a la operaciÃ³n \code{STATS} (21). La funciÃ³n se debe llamar de la siguiente manera:
+\begin{equation*}
+    \code{client:stats(Id).}
+\end{equation*}
+
+\subsubsection{OperaciÃ³n exit/1}
+El funcionamiento de \code{exit/1} solamente se basa en realizar una desconexiÃ³n del socket y solamente recibe el identificador de hilo \code{Id}. Una llamada exitosa de la operaciÃ³n 
+retorna el Ã¡tomo \code{exit}. Una ejemplo de invocaciÃ³n correcta de la funciÃ³n es:
+\begin{equation*}
+    \code{client:exit(Id).}
+\end{equation*}
+
+\section{TESTING}
+Para testear el servidor utilizamos distintos clientes variando distintos
+parametros, comandos y cantidad de clientes.
+En concreto, utilizamos:
+\begin{itemize}
+    \item test\_cliente.c
+    \item test\_server.c
+    \item cliente\_binario.c
+    \item netcat
+\end{itemize}
+
+netcat lo utilizamos para probar el parser de texto y todas las funciones relacionadas al handling de clientes en este modo,
+probando los distintos comandos y observando los resultados que generaba el programa. De manera anÃ¡loga, para el modo binario
+utilizamos cliente\_binario.c (el provisto por la cÃ¡tedra).\\
+Para probar mÃ¡s a fondo el rendimiento del programa, junto con la concurrencia de las estructuras de datos y el ruido en las
+conexiones, lo que hicimos fue probar con grandes cantidades de clientes. Los archivos test\_client.c y test\_server.erl se
+usaron para esta misma tarea.\\
+\newpage
+\section{BibliografÃ­a}
+\begin{itemize}
+    \item Operating Systems Concepts (quinta ediciÃ³n) - Silberschatz, Galvin.
+    \item Erlang programming - Cesarini, Thompson.
+    \item Epoll: https://idea.popcount.org/2017-02-20-epoll-is-fundamentally-broken-12/
+    \item The Linux Programming Interface - Kerrisk.
+    \item Slides de la cÃ¡tedra.
+\end{itemize}
+
+\end{document}

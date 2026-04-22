@@ -1,0 +1,57 @@
+[4mstrstr[24m(3)                                            Library Functions Manual                                            [4mstrstr[24m(3)
+
+[1mNAME[0m
+       strstr, strcasestr - locate a substring
+
+[1mLIBRARY[0m
+       Standard C library ([4mlibc[24m, [4m-lc[24m)
+
+[1mSYNOPSIS[0m
+       [1m#include <string.h>[0m
+
+       [1mchar *strstr(const char *[4m[22mhaystack[24m[1m, const char *[4m[22mneedle[24m[1m);[0m
+
+       [1m#define _GNU_SOURCE         [22m/* See feature_test_macros(7) */
+       [1m#include <string.h>[0m
+
+       [1mchar *strcasestr(const char *[4m[22mhaystack[24m[1m, const char *[4m[22mneedle[24m[1m);[0m
+
+[1mDESCRIPTION[0m
+       The  [1mstrstr[22m()  function  finds  the  first occurrence of the substring [4mneedle[24m in the string [4mhaystack[24m.  The terminating null
+       bytes ('\0') are not compared.
+
+       The [1mstrcasestr[22m() function is like [1mstrstr[22m(), but ignores the case of both arguments.
+
+[1mRETURN VALUE[0m
+       These functions return a pointer to the beginning of the located substring, or NULL if the substring is not found.
+
+       If [4mneedle[24m is the empty string, the return value is always [4mhaystack[24m itself.
+
+[1mATTRIBUTES[0m
+       For an explanation of the terms used in this section, see [1mattributes[22m(7).
+       ┌────────────────────────────────────────────────────────────────────────────────────────┬───────────────┬────────────────┐
+       │ [1mInterface                                                                              [22m│ [1mAttribute     [22m│ [1mValue          [22m│
+       ├────────────────────────────────────────────────────────────────────────────────────────┼───────────────┼────────────────┤
+       │ [1mstrstr[22m()                                                                               │ Thread safety │ MT-Safe        │
+       ├────────────────────────────────────────────────────────────────────────────────────────┼───────────────┼────────────────┤
+       │ [1mstrcasestr[22m()                                                                           │ Thread safety │ MT-Safe locale │
+       └────────────────────────────────────────────────────────────────────────────────────────┴───────────────┴────────────────┘
+
+[1mSTANDARDS[0m
+       [1mstrstr[22m()
+              C11, POSIX.1-2008.
+
+       [1mstrcasestr[22m()
+              GNU.
+
+[1mHISTORY[0m
+       [1mstrstr[22m()
+              POSIX.1-2001, C89.
+
+       [1mstrcasestr[22m()
+              GNU.
+
+[1mSEE ALSO[0m
+       [1mmemchr[22m(3), [1mmemmem[22m(3), [1mstrcasecmp[22m(3), [1mstrchr[22m(3), [1mstring[22m(3), [1mstrpbrk[22m(3), [1mstrsep[22m(3), [1mstrspn[22m(3), [1mstrtok[22m(3), [1mwcsstr[22m(3)
+
+Linux man-pages 6.7                                         2023-10-31                                                   [4mstrstr[24m(3)
