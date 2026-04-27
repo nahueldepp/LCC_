@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <fcntl.h>
+#include <signal.h>
 
 int denom = 0;
 void handler(int s) { printf("ouch!\n"); denom = 1; }

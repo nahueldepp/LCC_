@@ -16,7 +16,7 @@ int main (){
 
     char buffer[1024];
 
-    ssize_t n = read(fd, buffer, 1024);
+    ssize_t n = read(fd, buffer, 1024);//los caracteres que se leyeron
 
     if(n==-1){
         perror("read\n");
