@@ -3,6 +3,7 @@ import Control.Monad.Cont (label)
 import Language.Haskell.TH (Body)
 import GHC.Int (neInt32)
 import Distribution.Simple.Utils (xargs)
+import GHC.RTS.Flags (DebugFlags(hpc))
 
 data Bin a = Leaf | Nodo (Bin a) a (Bin a) deriving Show
 
@@ -205,3 +206,34 @@ deleteMin LeafH = LeafH
 deleteMin (N _ x a b) = merge a b
 
 
+-- =================
+--  pairing heap
+-- =================
+
+data PHeaps a = LeafPH | Root a [PHeaps a]
+
+isPHeap :: (Ord a) => PHeaps a -> Bool 
+isPHeap LeafPH = True
+isPHeap (Root x pheaps) = all (isMin x) pheaps && all isPHeap pheaps 
+
+isMin :: (Ord a) => a -> PHeaps a -> Bool 
+isMin _ LeafPH = True 
+isMin x (Root y _) = x<=y 
+
+mergePH :: (Ord a) => PHeaps a -> PHeaps a -> PHeaps a
+mergePH LeafPH ph = ph 
+mergePH ph LeafPH = ph 
+mergePH h1@(Root x hijosx) h2@(Root y hijosy) = 
+    if x <= y then Root x (h2:hijosx) 
+    else Root y (h1:hijosy)
+
+insertPH :: (Ord a) => PHeaps a -> a -> PHeaps a 
+insertPH hp x = mergePH (Root x [LeafPH]) hp
+
+concatHeaps :: (Ord a) => [PHeaps a] -> PHeaps a
+concatHeaps heaps = foldr mergePH LeafPH heaps 
+
+
+delMin :: (Ord a) => PHeaps a -> Maybe (a, PHeaps a)
+delMin LeafPH = Nothing
+delMin (Root x hijos) = Just (x, concatHeaps hijos)

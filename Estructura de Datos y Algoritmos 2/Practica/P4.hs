@@ -122,6 +122,82 @@ memberAux (NB l y r) x v
                                     | x <= y  = memberAux l x (Just y)
                                     | x>y = memberAux r x v 
                                                                      
--- ===============================================
--- 3) 
--- ===============================================
+-- ==============================================================================================
+--6)
+{-Definir una funci´on fromList :: [a ] → Heap a, que cree un leftist heap a partir de una lista, convirtiendo cada
+elemento de la lista en un heap de un solo elemento y aplicando la funci´on merge hasta obtener un solo heap. Aplicar
+la funci´on merge n veces, donde n es la longitud de la lista que recibe como argumento la funci´on-}  
+-- ==============================================================================================
+-- lefist heaps 
+
+type Rank = Int 
+data Heap a = LeafH | N Rank a (Heap a) (Heap a) deriving Show
+
+rank :: Heap a -> Rank
+rank LeafH = 0
+rank (N ran _ _ _) = ran 
+
+merge :: (Ord a) => Heap a -> Heap a -> Heap a 
+merge LeafH h = h
+merge h LeafH = h
+merge h1@(N _ x l1 r1) h2@(N _ y l2 r2) = 
+    if x <= y then makeH x l1 (merge r1 h2)
+    else    makeH y l2 (merge r2 h1) 
+
+makeH :: (Ord a) => a -> Heap a -> Heap a -> Heap a
+makeH  x a b = 
+    if rank a >= rank b then N (rank b + 1) x a b
+    else N (rank a + 1) x b a
+
+
+insert :: (Ord a) => a -> Heap a -> Heap a
+insert x  = merge (N 1 x LeafH  LeafH)  
+
+findMin :: Heap a -> a
+findMin (N _ x a b) = x
+
+deleteMin :: (Ord a) => Heap a -> Heap a
+deleteMin LeafH = LeafH
+deleteMin (N _ x a b) = merge a b
+
+
+
+fromList :: (Ord a ) => [a] -> Heap a
+fromList [] = LeafH
+fromList (x:xs) = merge (fromList xs) (makeH x LeafH LeafH)
+
+-- ============================================================
+-- 7) 
+-- ============================================================
+
+-- =================
+--  pairing heap
+-- =================
+
+data PHeaps a = LeafPH | Root a [PHeaps a]
+
+isPHeap :: (Ord a) => PHeaps a -> Bool 
+isPHeap LeafPH = True
+isPHeap (Root x pheaps) = all (isMin x) pheaps && all isPHeap pheaps 
+
+isMin :: (Ord a) => a -> PHeaps a -> Bool 
+isMin _ LeafPH = True 
+isMin x (Root y _) = x<=y 
+
+mergePH :: (Ord a) => PHeaps a -> PHeaps a -> PHeaps a
+mergePH LeafPH ph = ph 
+mergePH ph LeafPH = ph 
+mergePH h1@(Root x hijosx) h2@(Root y hijosy) = 
+    if x <= y then Root x (h2:hijosx) 
+    else Root y (h1:hijosy)
+
+insertPH :: (Ord a) => PHeaps a -> a -> PHeaps a 
+insertPH hp x = mergePH (Root x [LeafPH]) hp
+
+concatHeaps :: (Ord a) => [PHeaps a] -> PHeaps a
+concatHeaps heaps = foldr mergePH LeafPH heaps 
+
+
+delMin :: (Ord a) => PHeaps a -> Maybe (a, PHeaps a)
+delMin LeafPH = Nothing
+delMin (Root x hijos) = Just (x, concatHeaps hijos)
