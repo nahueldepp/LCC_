@@ -201,3 +201,4 @@ concatHeaps heaps = foldr mergePH LeafPH heaps
 delMin :: (Ord a) => PHeaps a -> Maybe (a, PHeaps a)
 delMin LeafPH = Nothing
 delMin (Root x hijos) = Just (x, concatHeaps hijos)
+

@@ -1,0 +1,125 @@
+\documentclass[12 pt]{article}
+\usepackage[spanish]{babel}
+\usepackage{amssymb}
+%opening
+\title{Trabajo Practico 1}
+\author{Deppen Nahuel}
+\date{}
+
+%------------
+\usepackage{setspace}
+\doublespacing
+
+\begin{document}
+
+\maketitle
+
+
+
+\section{${v}_{j}\in S.E({v}_{1},...,{v}_{n}), j=1,...,n$}
+\underline{\textbf{Demos:}}  \\
+\\
+  Veamos que por definición tenemos que $v={a}_{1}{v}_{1}+{a}_{2}{v}_{2}+...+{a}_{j}{v}_{j}+...+{a}_{n}{v}_{n}$
+ Tomando ${a}_{j}=1$ y ${a}_{i}=0, i=1,..,j-1,j+1,...n$ \\ Tenemos:\\
+ 
+  \begin{center} $v=0{v}_{1}+0{v}_{2}+...+{v}_{j}+....+0{v}_{n}={v}_{j}$
+\end{center}
+
+ Luego ${v}_{j} $es una combinacion lineal de ${v}_{1},...,{v}_{n}\in V, j=1,...,n$
+ 
+ \begin{center}
+ 	$ \therefore {v}_{j} \in  S.E({v}_{1},...,{v}_{n}), j=1,...,n$
+ \end{center} 
+ 
+ 
+
+ \newpage
+\section{$S.E({v}_{1},...,{v}_{n})$ es un subespacio de V}
+\underline {\textbf{Demos:}}\\
+1) Veamos que podemos escribir a 0 (cero), como una CL, con
+
+${v}_{j}\neq0, {a}_{j}=0, j=1,...,n$:
+
+\begin{center}
+	${a}_{1}{v}_{1}+{a}_{2}{v}_{2}+...+{a}_{n}{v}_{n}=
+	0{v}_{1}+0{v}_{2}+....+0{v}_{n}={v}_{j}=0 $ 
+	
+\end{center}
+
+ 
+Si existe algun ${v}_{j}=0$ entonces tomando $ {a}_{i}=0, i=1,...,j-1,j+1,...n$
+
+\begin{center}
+	$v=0{v}_{1}+...+{v}_{j}+...+{v}_{n}={v}_{j}=0$
+\end{center}
+\begin{center}
+$ \therefore 0 \in S.E({v}_{1},...,{v}_{n})$
+\end{center}
+
+
+
+
+2)Dados $ v \in S.E({v}_{1},...,{v}_{n})$ y
+$w \in S.E({v}_{1},...,{v}_{n})$
+
+
+Dados ${a}_{i} \in \Bbbk $ y ${b}_{i} \in \Bbbk , i=1,...,n$
+
+\begin{center}
+	
+$v={a}_{1}{v}_{1}+{a}_{2}{v}_{2}+...+{a}_{n}{v}_{n} \in  S.E({v}_{1},...,{v}_{n})$
+
+$w={b}_{1}{v}_{1}+{b}_{2}{v}_{2}+...+{b}_{n}{v}_{n} \in  S.E({v}_{1},...,{v}_{n})$
+ 
+
+
+\end{center}
+
+
+
+Tenemos:
+
+\begin{center}
+	$v+w=({a}_{1}{v}_{1}+{a}_{2}{v}_{2}+...+{a}_{n}{v}_{n})+({b}_{1}{v}_{1}+{b}_{2}{v}_{2}+...+{b}_{n}{v}_{n})=
+	{c}_{1}{v}_{1}+{c}_{2}{v}_{2}+...+{c}_{n}{v}_{n} $
+
+	
+	con ${c}_{i}={b}_{i}+{a}_{i}, i=1...n$ y ${c}_{i} \in \Bbbk$
+\end{center}
+ 
+ $ \therefore v+w \in S.E({v}_{1},...,{v}_{n})$
+ 
+ \newpage
+ 
+ 3) Dado $v \in S.E({v}_{1},...,{v}_{n})$ y $\alpha \in \Bbbk $:
+ 
+ \begin{center}
+ 	
+ 	$ \alpha v= \alpha ({a}_{1}{v}_{1}+{a}_{2}{v}_{2}+...+{a}_{n}{v}_{n})=
+ 	{\alpha a}_{1}{v}_{1}+{\alpha a}_{2}{v}_{2}+...+{\alpha a}_{n}{v}_{n}$
+ 	
+ 	Con $ {\alpha a}_{i} \in \Bbbk , i=1,...,n$
+\end{center}
+
+$ \therefore \alpha v \in S.E({v}_{1},...,{v}_{n})$
+
+
+\begin{center} 
+	
+	$ \therefore $ Por 1), 2), y 3) $ S.E({v}_{1},...,{v}_{n}) $ es un subespacio de V 
+\end{center}
+
+
+
+  \section{Si $U \subset V$ es un subespacio tal que ${v}_{1},...,{v}_{n} \in U$, luego $S.E({v}_{1},...,{v}_{n}) \subset U$ }
+
+\underline{\textbf{Demos:}}
+
+Como U es un s.e de V, sabemos que $0 \in U$ y , la suma y  multiplicación por escalar, son cerradas para todo ${v}_{1},...,{v}_{n} \in U. $
+
+Ahora, ${v}_{1},...,{v}_{n} \in U$  solo si ${v}_{1},...,{v}_{n} \in V$, como vimos en el punto anterior dados ${v}_{1},...,{v}_{n} \in V$ sabemos que  $ S.E({v}_{1},...,{v}_{n}) $ es un subespacio de V. 
+
+Luego, como ${v}_{1},...,{v}_{n} \in U $ y $ S.E({v}_{1},...,{v}_{n}) \subset V $ entonces   $ S.E({v}_{1},...,{v}_{n}) \subset U $
+
+\end{document}
+

@@ -17,9 +17,9 @@ sem_t barberoLibre;
 sem_t corteHecho;
 sem_t pagoRealizado;
 
-
-
 sem_t esperandoCorte, esperandoPago;
+
+
 void me_cortan(int i){
     printf("Soy el cliente %d, me estan cortando el pelo\n",i);
     sleep(random()%3);

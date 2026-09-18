@@ -237,3 +237,8 @@ concatHeaps heaps = foldr mergePH LeafPH heaps
 delMin :: (Ord a) => PHeaps a -> Maybe (a, PHeaps a)
 delMin LeafPH = Nothing
 delMin (Root x hijos) = Just (x, concatHeaps hijos)
+
+
+data AGTree a = NodeA a [AGTree a ] deriving Show
+ponerProfs :: Num t => t -> AGTree a -> AGTree t
+ponerProfs n (NodeA x xs) = NodeA n (map (ponerProfs (n + 1)) xs)
